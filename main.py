@@ -12,7 +12,6 @@ from discord import app_commands
 
 
 SERVER_VERSION = '1.12.2'
-LOG_DIRECTORY = 'logs'
 GUILD_ID = '880261855581458462'
 
 
@@ -168,9 +167,6 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
     '''Respond to an uploaded file'''
     await interaction.response.defer(ephemeral=True, thinking=True)
     filename = f"{datetime.utcnow().isoformat()}_{interaction.user.id}_{attachment.filename}"
-    filename = os.path.join(LOG_DIRECTORY, filename)
-    if not os.path.exists(LOG_DIRECTORY):
-        os.mkdir(LOG_DIRECTORY)
     await attachment.save(filename)
     repairs = parse_file(filename)
     result = f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found\n"
