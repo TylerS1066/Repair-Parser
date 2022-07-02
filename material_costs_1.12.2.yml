@@ -1,0 +1,43 @@
+### Factory Worker ###
+tnt: 150.00
+fireball: 10.00
+coal block: 135.00
+concrete: 5.00
+wool: 2.50
+stained clay: 5.00
+redstone block: 180.00
+iron block: 90.00
+step: 1.50 # Stone slab
+dispenser: 150.00
+sign: 6.00
+
+### Minerals ###
+# lapis block: 3.00 x9
+# emerald block: 150.00 x9
+# diamond block: 500.00 x9
+lever: 1.00
+redstone torch on: 4.00
+redstone: 20.00
+diode: 60.00
+redstone comparator: 80.00
+# observer: 120.00
+piston base: 40.00
+piston sticky base: 50.00
+
+### Building Blocks ###
+# stone button: 1.00
+smooth stairs: 9.00 # 6.00 /6x4
+furnace: 40.00 # 5.00 x8
+# glass: 10.00
+wood button: 3.75 # 15.00 /4
+trap door: 5.00
+# trapped chest: 42.00
+chest: 30.00
+
+### Specialty ###
+stone: 12.00 # AKA Andesite
+ender stone: 100.00
+end bricks: 100.00
+
+### Combo ###
+bed: 18.75 # 15.00 /4x3 + 2.50 x3
