@@ -4,6 +4,7 @@ fireball: 10.00
 coal block: 135.00
 concrete: 5.00
 wool: 2.50
+carpet: 1.667 # 2.5 /3x2
 stained clay: 5.00
 redstone block: 180.00
 iron block: 90.00
@@ -20,7 +21,7 @@ redstone torch on: 4.00
 redstone: 20.00
 diode: 60.00
 redstone comparator: 80.00
-# observer: 120.00
+observer: 120.00
 piston base: 40.00
 piston sticky base: 50.00
 
@@ -30,6 +31,9 @@ smooth stairs: 9.00 # 6.00 /6x4
 furnace: 40.00 # 5.00 x8
 # glass: 10.00
 wood button: 3.75 # 15.00 /4
+ladder: 4.375 # 15.00 /4/2x7/3
+fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
+birch fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
 trap door: 5.00
 # trapped chest: 42.00
 chest: 30.00
@@ -38,6 +42,9 @@ chest: 30.00
 stone: 12.00 # AKA Andesite
 ender stone: 100.00
 end bricks: 100.00
+nether brick: 3.00
+nether brick stairs: 4.50 # 3.00 /4x6
 
 ### Combo ###
 bed: 18.75 # 15.00 /4x3 + 2.50 x3
+dropper: 55.00 # 5.00 x7 + 20.00 x1
