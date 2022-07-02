@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import datetime
 import time
 import logging
-import json
 import yaml
 import discord
 from discord import app_commands
