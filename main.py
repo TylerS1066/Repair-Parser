@@ -15,6 +15,15 @@ SERVER_VERSION = '1.12.2'
 GUILD_ID = '880261855581458462'
 
 
+
+class SplitError(ValueError):
+    pass
+
+class PricingError(ValueError):
+    pass
+
+
+
 @dataclass
 class Repair:
     '''Represents a repair'''
@@ -29,9 +38,9 @@ class Repair:
         string = string.strip()
         strings = string.split(split)
         if len(strings) < 2:
-            raise ValueError(f"'{string}' cannot be split by '{split}'")
+            raise SplitError(f"'{string}' cannot be split by '{split}'")
         if len(strings) > 2:
-            raise ValueError(f"'{string}' was split by '{split}' too many times")
+            raise SplitError(f"'{string}' was split by '{split}' too many times")
         return strings[1]
 
     @staticmethod
@@ -44,18 +53,18 @@ class Repair:
     def __split_material_line(string: str) -> 'tuple[str, int]':
         strings = string.split(' : ')
         if len(strings) < 2:
-            raise ValueError(f"'{string}' cannot be split")
+            raise SplitError(f"'{string}' cannot be split")
         if len(strings) > 2:
-            raise ValueError(f"'{string}' was split too many times")
+            raise SplitError(f"'{string}' was split too many times")
         return strings[0], int(strings[1])
 
     @staticmethod
     def __split_delay_cost_line(string: str) -> int:
         strings = string.split(': ')
         if len(strings) < 2:
-            raise ValueError(f"'{string}' cannot be split")
+            raise SplitError(f"'{string}' cannot be split")
         if len(strings) > 2:
-            raise ValueError(f"'{string}' was split too many times")
+            raise SplitError(f"'{string}' was split too many times")
         return int(strings[1])
 
     @staticmethod
@@ -89,7 +98,7 @@ class Repair:
         total = self.cost
         for supply, amount in self.supplies:
             if supply not in prices.keys():
-                raise ValueError(f"{supply} is not in the prices dictionary")
+                raise PricingError(f"{supply} is not in the prices dictionary")
             total += amount * prices[supply]
         return total
 
@@ -166,13 +175,30 @@ async def on_ready():
 async def parse(interaction: discord.Interaction, attachment: discord.Attachment):
     '''Respond to an uploaded file'''
     await interaction.response.defer(ephemeral=True, thinking=True)
-    filename = f"{datetime.utcnow().isoformat()}_{interaction.user.id}_{attachment.filename}"
-    await attachment.save(filename)
-    repairs = parse_file(filename)
-    result = f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found\n"
-    for repair in repairs:
-        result += f"{repair.start}: ${repair.total_cost(material_costs):,.2f} & "
-        result += f"{repair.delay:,.0f}s\n"
+    try:
+        filename = f"{datetime.utcnow().isoformat()}_{interaction.user.id}_{attachment.filename}"
+        await attachment.save(filename)
+    except (discord.HTTPException, discord.NotFound) as exception:
+        await interaction.followup.send(f"Error downloading attachment: {exception}")
+        return
+    except BaseException as exception:
+        await interaction.followup.send(f"Unknown error downloading: {exception}")
+        return
+    try:
+        repairs = parse_file(filename)
+        result = f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found\n"
+        for repair in repairs:
+            try:
+                result += f"> {repair.start}: ${repair.total_cost(material_costs):,.2f} & "
+                result += f"{repair.delay:,.0f}s\n"
+            except PricingError as exception:
+                result += f"> Error pricing: {exception}\n"
+    except SplitError as exception:
+        await interaction.followup.send(f"{repair.start}: Error pricing - {exception}")
+        return
+    except BaseException as exception:
+        await interaction.followup.send(f"Unknown error parsing: {exception}")
+        return
     await interaction.followup.send(result, ephemeral=True)
     logger.info('%s (%s) uploaded %s (%s)',
         interaction.user.name, interaction.user.id,
