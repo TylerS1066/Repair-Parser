@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 import time
+import logging
 import yaml
 import discord
 from discord import app_commands
@@ -146,7 +147,9 @@ intents = discord.Intents.all()
 intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
-guild=discord.Object(id=GUILD_ID)
+guild = discord.Object(id=GUILD_ID)
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
 
 material_costs = load_materials()
 
@@ -156,7 +159,7 @@ material_costs = load_materials()
 async def on_ready():
     '''Print when the bot is ready'''
     await tree.sync(guild=guild)
-    print(f"Logged in as {client.user.name}")
+    logger.info('Logged in as %s', client.user.name)
 
 @tree.command(guild=guild)
 @app_commands.describe(attachment='The file to upload')
@@ -174,6 +177,10 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         result += f"{repair.start}: ${repair.total_cost(material_costs):,.2f} & "
         result += f"{repair.delay:,.0f}s\n"
     await interaction.followup.send(result, ephemeral=True)
+    logger.info('%s (%s) uploaded %s (%s)',
+        interaction.user.name, interaction.user.id,
+        attachment.filename, filename
+    )
 
 
 
