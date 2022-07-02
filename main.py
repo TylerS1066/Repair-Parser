@@ -6,7 +6,7 @@ import yaml
 
 
 VERSION = '1.12.2'
-LOADING_METHOD = 'HAND' # Or '/load'
+
 
 
 @dataclass
