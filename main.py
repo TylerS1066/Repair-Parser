@@ -1,12 +1,17 @@
+import gzip
+import os
 from dataclasses import dataclass
 from datetime import datetime
 import time
 import yaml
+import discord
+from discord import app_commands
 
 
 
-VERSION = '1.12.2'
-
+SERVER_VERSION = '1.12.2'
+LOG_DIRECTORY = 'logs'
+GUILD_ID = '880261855581458462'
 
 
 @dataclass
@@ -94,8 +99,12 @@ class Repair:
 
 def parse_file(filename: str) -> list[Repair]:
     '''Parses a file and returns a list of repairs'''
-    with open(filename, 'r', encoding='UTF-8') as f:
-        log_lines = f.readlines()
+    if filename.endswith('.gz'):
+        with gzip.open(filename, 'rb') as f:
+            log_lines = f.read().decode('UTF-8',errors='ignore').splitlines()
+    else:
+        with open(filename, 'r', encoding='UTF-8') as f:
+            log_lines = f.readlines()
 
     repair_starts = []
     repair_ends = []
@@ -115,15 +124,57 @@ def parse_file(filename: str) -> list[Repair]:
 
 def load_materials() -> dict[str, int]:
     '''Loads the materials from the materials yaml file'''
-    with open(f"material_costs_{VERSION}.yml", 'r', encoding='UTF-8') as f:
+    with open(f"material_costs_{SERVER_VERSION}.yml", 'r', encoding='UTF-8') as f:
         material_costs = yaml.safe_load(f)
     return material_costs
 
+def token() -> str:
+    '''Read token from environment or file'''
+    try:
+        # Load the tokens from the environment
+        token = os.environ['SECRET_DISCORD_TOKEN']
+    except KeyError:
+        # Or load from JSON file
+        with open('token.json', 'r', encoding='UTF+8') as f:
+            tokens = json.load(f)
+            token = tokens['DISCORD']
+    return token
 
-if __name__ == '__main__':
-    material_costs = load_materials()
-    repairs = parse_file('latest.log')
 
-    print(f"{len(repairs)} repair{'s' if len(repairs) > 1 else ''} found")
+
+intents = discord.Intents.all()
+intents.message_content = True
+client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
+guild=discord.Object(id=GUILD_ID)
+
+material_costs = load_materials()
+
+
+
+@client.event
+async def on_ready():
+    '''Print when the bot is ready'''
+    await tree.sync(guild=guild)
+    print(f"Logged in as {client.user.name}")
+
+@tree.command(guild=guild)
+@app_commands.describe(attachment='The file to upload')
+async def parse(interaction: discord.Interaction, attachment: discord.Attachment):
+    '''Respond to an uploaded file'''
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    filename = f"{datetime.utcnow().isoformat()}_{interaction.user.id}_{attachment.filename}"
+    filename = os.path.join(LOG_DIRECTORY, filename)
+    if not os.path.exists(LOG_DIRECTORY):
+        os.mkdir(LOG_DIRECTORY)
+    await attachment.save(filename)
+    repairs = parse_file(filename)
+    result = f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found\n"
     for repair in repairs:
-            print(f"{repair.start}: ${repair.total_cost(material_costs):,.2f} & {repair.delay:,.0f}s")
+        result += f"{repair.start}: ${repair.total_cost(material_costs):,.2f} & "
+        result += f"{repair.delay:,.0f}s\n"
+    await interaction.followup.send(result, ephemeral=True)
+
+
+
+client.run(token())
