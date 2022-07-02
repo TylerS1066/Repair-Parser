@@ -141,8 +141,8 @@ def parse_file(filename: str) -> list[Repair]:
 def load_materials() -> dict[str, int]:
     '''Loads the materials from the materials yaml file'''
     with open(f"material_costs_{args.server_version}.yml", 'r', encoding='UTF-8') as f:
-        material_costs = yaml.safe_load(f)
-    return material_costs
+        costs = yaml.safe_load(f)
+    return costs
 
 
 # Discord.py stuff
