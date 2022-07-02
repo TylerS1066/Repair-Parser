@@ -92,8 +92,9 @@ class Repair:
 
 
 
-if __name__ == '__main__':
-    with open('latest.log', 'r', encoding='UTF-8') as f:
+def parse_file(filename: str) -> list[Repair]:
+    '''Parses a file and returns a list of repairs'''
+    with open(filename, 'r', encoding='UTF-8') as f:
         log_lines = f.readlines()
 
     repair_starts = []
@@ -110,10 +111,19 @@ if __name__ == '__main__':
     for i in range(min(len(repair_starts), len(repair_ends))):
         repair = Repair.parse(log_lines, repair_starts[i], repair_ends[i])
         repairs.append(repair)
+    return repairs
 
+def load_materials() -> dict[str, int]:
+    '''Loads the materials from the materials yaml file'''
     with open(f"material_costs_{VERSION}.yml", 'r', encoding='UTF-8') as f:
         material_costs = yaml.safe_load(f)
+    return material_costs
+
+
+if __name__ == '__main__':
+    material_costs = load_materials()
+    repairs = parse_file('latest.log')
 
     print(f"{len(repairs)} repair{'s' if len(repairs) > 1 else ''} found")
     for repair in repairs:
-        print(f"{repair.start}: ${repair.total_cost(material_costs):,.2f} & {repair.delay:,.0f}s")
+            print(f"{repair.start}: ${repair.total_cost(material_costs):,.2f} & {repair.delay:,.0f}s")
