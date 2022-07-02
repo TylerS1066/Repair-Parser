@@ -1,3 +1,4 @@
+import argparse
 import gzip
 import os
 from dataclasses import dataclass
@@ -11,18 +12,22 @@ from discord import app_commands
 
 
 
-SERVER_VERSION = '1.12.2'
-LOG_DIRECTORY = 'logs'
-GUILD_ID = '880261855581458462'
+# Parse arguments
+parser = argparse.ArgumentParser(description='Repair bot')
+parser.add_argument('--log_directory', type=str, default='logs', help='Directory to store logs')
+parser.add_argument('--token', type=str, help='Discord token')
+parser.add_argument('--guild_id', type=int, help='Guild ID')
+parser.add_argument('--server_version', type=str, default='1.12.2', help='Server version')
+args = parser.parse_args()
 
 
 
+# Classes
 class SplitError(ValueError):
-    pass
+    '''Represents an error splitting a line'''
 
 class PricingError(ValueError):
-    pass
-
+    '''Represents an error pricing a line'''
 
 
 @dataclass
@@ -108,6 +113,7 @@ class Repair:
 
 
 
+# Utility functions
 def parse_file(filename: str) -> list[Repair]:
     '''Parses a file and returns a list of repairs'''
     if filename.endswith('.gz'):
@@ -135,34 +141,21 @@ def parse_file(filename: str) -> list[Repair]:
 
 def load_materials() -> dict[str, int]:
     '''Loads the materials from the materials yaml file'''
-    with open(f"material_costs_{SERVER_VERSION}.yml", 'r', encoding='UTF-8') as f:
+    with open(f"material_costs_{args.server_version}.yml", 'r', encoding='UTF-8') as f:
         material_costs = yaml.safe_load(f)
     return material_costs
 
-def token() -> str:
-    '''Read token from environment or file'''
-    try:
-        # Load the tokens from the environment
-        token = os.environ['SECRET_DISCORD_TOKEN']
-    except KeyError:
-        # Or load from JSON file
-        with open('token.json', 'r', encoding='UTF+8') as f:
-            tokens = json.load(f)
-            token = tokens['DISCORD']
-    return token
 
-
-
-intents = discord.Intents.all()
+# Discord.py stuff
+intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
-guild = discord.Object(id=GUILD_ID)
+guild = discord.Object(id=args.guild_id)
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
 
 material_costs = load_materials()
-
 
 
 @client.event
@@ -178,9 +171,9 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
     await interaction.response.defer(ephemeral=True, thinking=True)
     try:
         filename = f"{datetime.utcnow().isoformat()}_{interaction.user.id}_{attachment.filename}"
-        filename = os.path.join(LOG_DIRECTORY, filename)
-        if not os.path.exists(LOG_DIRECTORY):
-            os.mkdir(LOG_DIRECTORY)
+        filename = os.path.join(args.log_directory, filename)
+        if not os.path.exists(args.log_directory):
+            os.mkdir(args.log_directory)
         await attachment.save(filename)
     except (discord.HTTPException, discord.NotFound) as exception:
         await interaction.followup.send(f"Error downloading attachment: {exception}")
@@ -210,5 +203,4 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
     )
 
 
-
-client.run(token())
+client.run(args.token)
