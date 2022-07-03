@@ -40,11 +40,12 @@ chest: 30.00
 
 ### Specialty ###
 stone: 12.00 # AKA Andesite
-ender stone: 100.00
-end bricks: 100.00
+ender stone: 99.00 # SH price
+end bricks: 99.00 # SH price
 nether brick: 3.00
 nether brick stairs: 4.50 # 3.00 /4x6
 
 ### Combo ###
 bed: 18.75 # 15.00 /4x3 + 2.50 x3
-dropper: 55.00 # 5.00 x7 + 20.00 x1
+dropper: 55.00 # 5.00 x7 + 20.00
+redstone lamp off: 101.00 # 20 x4 + 21.00, SH price
