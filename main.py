@@ -116,11 +116,11 @@ class Repair:
 def parse_file(filename: str) -> list[Repair]:
     '''Parses a file and returns a list of repairs'''
     if filename.endswith('.gz'):
-        with gzip.open(filename, 'rb') as f:
-            log_lines = f.read().decode('UTF-8',errors='ignore').splitlines()
+        with gzip.open(filename, 'rb') as file:
+            log_lines = file.read().decode('UTF-8',errors='ignore').splitlines()
     else:
-        with open(filename, 'r', encoding='UTF-8') as f:
-            log_lines = f.readlines()
+        with open(filename, 'rb') as file:
+            log_lines = file.read().decode('UTF-8',errors='ignore').splitlines()
 
     repair_starts = []
     repair_ends = []
