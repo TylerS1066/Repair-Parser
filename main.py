@@ -143,6 +143,12 @@ def load_materials() -> dict[str, int]:
         costs = yaml.safe_load(f)
     return costs
 
+def load_guilds() -> list[int]:
+    '''Loads the guilds from the guilds yaml file'''
+    with open(f"guilds.yml", 'r', encoding='UTF-8') as f:
+        guilds = yaml.safe_load(f)
+    return guilds['guilds']
+
 
 # Discord.py stuff
 intents = discord.Intents.default()
@@ -153,6 +159,7 @@ logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
 
 material_costs = load_materials()
+guilds = load_guilds()
 
 
 @client.event
@@ -174,6 +181,10 @@ def log(interaction: discord.Interaction, attachment_name: str, filename: str, e
 @app_commands.describe(attachment='The log file to upload')
 async def parse(interaction: discord.Interaction, attachment: discord.Attachment):
     '''Respond to an uploaded logfile'''
+    # Check allowed guilds
+    if interaction.guild_id not in guilds:
+        await interaction.response.send_message("This server is not allowed to use this bot")
+        return
     # Check file name and size
     if not attachment.filename.endswith('.log.gz') and not attachment.filename.endswith('.log'):
         await interaction.response.send_message('File must be a .log.gz or .log file')
