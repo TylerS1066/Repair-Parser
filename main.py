@@ -78,6 +78,7 @@ class Repair:
 
     @staticmethod
     def parse(lines: 'list[str]', start_index: int, end_index: int) -> 'Repair':
+        '''Parses a repair from a list of lines'''
         damaged_index = start_index
         percentage_index = start_index + 1
         supply_start_index = start_index + 3
@@ -141,32 +142,35 @@ def parse_file(filename: str) -> list[Repair]:
         with open(filename, 'rb') as file:
             log_lines = file.read().decode('UTF-8',errors='ignore').splitlines()
 
-    repair_starts = []
-    repair_ends = []
+    repair_bounds = []
+    start = -1
+    end = -1
     i = 0
     for line in log_lines:
         if 'Total damaged blocks: ' in line:
-            repair_starts.append(i)
+            start = i
         elif 'Money to complete repair: ' in line:
-            repair_ends.append(i)
+            end = i
+            if start != -1:
+                repair_bounds.append((start, end))
         i += 1
 
     repairs: list[Repair] = []
-    for i in range(min(len(repair_starts), len(repair_ends))):
-        repair = Repair.parse(log_lines, repair_starts[i], repair_ends[i])
+    for start, end in repair_bounds:
+        repair = Repair.parse(log_lines, start, end)
         repairs.append(repair)
     return repairs
 
 def load_materials() -> dict[str, int]:
     '''Loads the materials from the materials yaml file'''
-    with open(f"material_costs_{args.server_version}.yml", 'r', encoding='UTF-8') as f:
-        costs = yaml.safe_load(f)
+    with open(f"material_costs_{args.server_version}.yml", 'r', encoding='UTF-8') as file:
+        costs = yaml.safe_load(file)
     return costs
 
 def load_guilds() -> list[int]:
     '''Loads the guilds from the guilds yaml file'''
-    with open(f"guilds.yml", 'r', encoding='UTF-8') as f:
-        guilds = yaml.safe_load(f)
+    with open('guilds.yml', 'r', encoding='UTF-8') as file:
+        guilds = yaml.safe_load(file)
     return guilds['guilds']
 
 
@@ -179,7 +183,7 @@ logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
 
 material_costs = load_materials()
-guilds = load_guilds()
+allowed_guilds = load_guilds()
 
 
 @client.event
@@ -188,7 +192,9 @@ async def on_ready():
     logger.info('Logged in as %s', client.user.name)
 
 
-def log(interaction: discord.Interaction, attachment_name: str, filename: str, ending = 'No Errors'):
+def log(interaction: discord.Interaction, attachment_name: str, filename: str,
+        ending = 'No Errors'):
+    '''Logs an interaction'''
     logger.info("'%s' (%s) uploaded '%s' (%s) to '%s'/'%s' (%s/%s): %s",
         interaction.user.name, interaction.user.id,
         attachment_name, filename,
@@ -202,12 +208,13 @@ def log(interaction: discord.Interaction, attachment_name: str, filename: str, e
 async def parse(interaction: discord.Interaction, attachment: discord.Attachment):
     '''Respond to an uploaded logfile'''
     # Check allowed guilds
-    if interaction.guild_id not in guilds:
+    if interaction.guild_id not in allowed_guilds:
         await interaction.response.send_message("This server is not allowed to use this bot")
         return
     # Check file name and size
     if not attachment.filename.endswith('.log.gz') and not attachment.filename.endswith('.log'):
-        await interaction.response.send_message('File must be a .log.gz or .log file', ephemeral=True)
+        await interaction.response.send_message('File must be a .log.gz or .log file',
+            ephemeral=True)
         log(interaction, attachment.filename, '', 'Wrong type')
         return
     if attachment.size > 32*1024*1024:
@@ -239,12 +246,13 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         repairs = parse_file(filename)
         result = f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found\n"
         for repair in repairs:
+            result += f"> {repair.start}: {repair.damaged:,} Blocks"
             try:
-                result += f"> {repair.start}: ${repair.total_cost(material_costs):,.2f} & "
+                result += f", ${repair.total_cost(material_costs):,.2f} & "
                 result += f"{repair.delay:,.0f}s\n"
             except PricingError as exception:
-                result += f"> Error pricing: {exception}\n"
-                logger.info(f"Error pricing: {exception}")
+                result += f" & Error pricing: {exception}\n"
+                logger.info('Error pricing: %s', exception)
     except SplitError as exception:
         await interaction.followup.send(f"{repair.start}: Error pricing - {exception}")
         log(interaction, attachment.filename, filename, f"{exception}")
