@@ -24,7 +24,7 @@ redstone comparator: 80.00
 observer: 120.00
 piston base: 40.00
 piston sticky base: 50.00
-iron trapdoor: x.xx # x.xx x4
+iron trapdoor: 40.00 # 10.00 x4
 
 ### Building Blocks ###
 # stone button: 1.00
