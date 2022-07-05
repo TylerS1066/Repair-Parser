@@ -15,7 +15,6 @@ from discord import app_commands
 parser = argparse.ArgumentParser(description='Repair bot')
 parser.add_argument('--log_directory', type=str, default='logs', help='Directory to store logs')
 parser.add_argument('--token', type=str, help='Discord token')
-parser.add_argument('--guild_id', type=int, help='Guild ID')
 parser.add_argument('--server_version', type=str, default='1.12.2', help='Server version')
 args = parser.parse_args()
 
@@ -150,7 +149,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
-guild = discord.Object(id=args.guild_id)
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
 
@@ -160,14 +158,36 @@ material_costs = load_materials()
 @client.event
 async def on_ready():
     '''Print when the bot is ready'''
-    await tree.sync(guild=guild)
     logger.info('Logged in as %s', client.user.name)
 
-@tree.command(guild=guild)
-@app_commands.describe(attachment='The file to upload')
+
+def log(interaction: discord.Interaction, attachment_name: str, filename: str, ending = 'No Errors'):
+    logger.info("'%s' (%s) uploaded '%s' (%s) to '%s'/'%s' (%s/%s): %s",
+        interaction.user.name, interaction.user.id,
+        attachment_name, filename,
+        interaction.guild.name, interaction.channel.name,
+        interaction.guild_id, interaction.channel_id,
+        ending
+    )
+
+@tree.command()
+@app_commands.describe(attachment='The log file to upload')
 async def parse(interaction: discord.Interaction, attachment: discord.Attachment):
-    '''Respond to an uploaded file'''
+    '''Respond to an uploaded logfile'''
+    # Check file name and size
+    if not attachment.filename.endswith('.log.gz') and not attachment.filename.endswith('.log'):
+        await interaction.response.send_message('File must be a .log.gz or .log file')
+        log(interaction, attachment.filename, '', 'Wrong type')
+        return
+    if attachment.size > 32*1024*1024:
+        await interaction.response.send_message('File must be less than 32MiB')
+        log(interaction, attachment.filename, '', f"Too large ({attachment.size:,} bytes)")
+        return
+
+    # Defer response
     await interaction.response.defer(ephemeral=True, thinking=True)
+
+    # Attempt to download
     try:
         filename = f"{datetime.utcnow().isoformat()}_{interaction.user.id}_{attachment.filename}"
         filename = os.path.join(args.log_directory, filename)
@@ -176,10 +196,14 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         await attachment.save(filename)
     except (discord.HTTPException, discord.NotFound) as exception:
         await interaction.followup.send(f"Error downloading attachment: {exception}")
+        log(interaction, attachment.filename, filename, f"{exception}")
         return
     except BaseException as exception:
         await interaction.followup.send(f"Unknown error downloading: {exception}")
+        log(interaction, attachment.filename, filename, f"{exception}")
         return
+
+    # Attempt parsing
     try:
         repairs = parse_file(filename)
         result = f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found\n"
@@ -191,15 +215,14 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
                 result += f"> Error pricing: {exception}\n"
     except SplitError as exception:
         await interaction.followup.send(f"{repair.start}: Error pricing - {exception}")
+        log(interaction, attachment.filename, filename, f"{exception}")
         return
     except BaseException as exception:
         await interaction.followup.send(f"Unknown error parsing: {exception}")
+        log(interaction, attachment.filename, filename, f"{exception}")
         return
     await interaction.followup.send(result, ephemeral=True)
-    logger.info('%s (%s) uploaded %s (%s)',
-        interaction.user.name, interaction.user.id,
-        attachment.filename, filename
-    )
+    log(interaction, attachment.filename, filename)
 
 
 client.run(args.token)

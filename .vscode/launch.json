@@ -12,8 +12,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--t", "${env:SECRET_DISCORD_TOKEN}",
-                "--g", "${env:SECRET_DISCORD_GUILD}"
+                "--t", "${env:SECRET_DISCORD_TOKEN}"
             ]
         },
         {
@@ -24,8 +23,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--t", "${env:SECRET_DISCORD_TOKEN_PROD}",
-                "--g", "${env:SECRET_DISCORD_GUILD_PROD}"
+                "--t", "${env:SECRET_DISCORD_TOKEN_PROD}"
             ]
         }
     ]
