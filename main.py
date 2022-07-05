@@ -32,9 +32,11 @@ class PricingError(ValueError):
 class Repair:
     '''Represents a repair'''
     start: datetime
+    damaged: int
+    percent: float
     supplies: 'list[tuple[str, int]]'
-    cost: int
     delay: int
+    cost: int
 
 
     @staticmethod
@@ -63,30 +65,39 @@ class Repair:
         return strings[0], int(strings[1])
 
     @staticmethod
-    def __split_delay_cost_line(string: str) -> int:
+    def __split_number_line(string: str) -> int | float:
         strings = string.split(': ')
         if len(strings) < 2:
             raise SplitError(f"'{string}' cannot be split")
         if len(strings) > 2:
             raise SplitError(f"'{string}' was split too many times")
-        return int(strings[1])
+        try:
+            return int(strings[1])
+        except ValueError:
+            return float(strings[1])
 
     @staticmethod
     def parse(lines: 'list[str]', start_index: int, end_index: int) -> 'Repair':
-        supply_start_index = start_index + 1
+        damaged_index = start_index
+        percentage_index = start_index + 1
+        supply_start_index = start_index + 3
+        supply_end_index = end_index - 2
+        delay_index = end_index - 1
         cost_index = end_index
-        delay_index = cost_index - 1
-        supply_end_index = cost_index - 1
+
 
         # Reduce lines
         start = lines[start_index]
         start = Repair.__split_start_line(start)
-        cost = lines[cost_index]
-        cost = Repair.__split_chat_line(cost)
-        cost = Repair.__split_delay_cost_line(cost)
-        delay = lines[delay_index]
-        delay = Repair.__split_chat_line(delay)
-        delay = Repair.__split_delay_cost_line(delay)
+
+        damaged = lines[damaged_index]
+        damaged = Repair.__split_chat_line(damaged)
+        damaged = Repair.__split_number_line(damaged)
+
+        percent = lines[percentage_index]
+        percent = Repair.__split_chat_line(percent)
+        percent = Repair.__split_number_line(percent)
+
         supplies = []
         for index in range(supply_start_index, supply_end_index):
             line = lines[index]
@@ -94,7 +105,16 @@ class Repair:
             line = Repair.__split_material_line(line)
             supplies.append(line)
 
-        return Repair(start, supplies, cost, delay)
+        delay = lines[delay_index]
+        delay = Repair.__split_chat_line(delay)
+        delay = Repair.__split_number_line(delay)
+
+        cost = lines[cost_index]
+        cost = Repair.__split_chat_line(cost)
+        cost = Repair.__split_number_line(cost)
+
+
+        return Repair(start, damaged, percent, supplies, delay, cost)
 
 
     def total_cost(self, prices: dict[str, int]) -> float:
@@ -107,7 +127,7 @@ class Repair:
         return total
 
     def __str__(self):
-        return f"{self.start}: ${self.cost:,.2f} & {self.delay:,.0f}s"
+        return f"{self.start}: {self.damaged:,} Blocks, ${self.cost:,.2f}, {self.delay:,.0f}s"
 
 
 
@@ -125,7 +145,7 @@ def parse_file(filename: str) -> list[Repair]:
     repair_ends = []
     i = 0
     for line in log_lines:
-        if 'SUPPLIES NEEDED' in line:
+        if 'Total damaged blocks: ' in line:
             repair_starts.append(i)
         elif 'Money to complete repair: ' in line:
             repair_ends.append(i)
@@ -187,11 +207,11 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         return
     # Check file name and size
     if not attachment.filename.endswith('.log.gz') and not attachment.filename.endswith('.log'):
-        await interaction.response.send_message('File must be a .log.gz or .log file')
+        await interaction.response.send_message('File must be a .log.gz or .log file', ephemeral=True)
         log(interaction, attachment.filename, '', 'Wrong type')
         return
     if attachment.size > 32*1024*1024:
-        await interaction.response.send_message('File must be less than 32MiB')
+        await interaction.response.send_message('File must be less than 32MiB', ephemeral=True)
         log(interaction, attachment.filename, '', f"Too large ({attachment.size:,} bytes)")
         return
 
