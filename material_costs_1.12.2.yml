@@ -24,6 +24,7 @@ redstone comparator: 80.00
 observer: 120.00
 piston base: 40.00
 piston sticky base: 50.00
+iron trapdoor: x.xx # x.xx x4
 
 ### Building Blocks ###
 # stone button: 1.00
@@ -34,18 +35,26 @@ wood button: 3.75 # 15.00 /4
 ladder: 4.375 # 15.00 /4/2x7/3
 fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
 birch fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
+dark oak fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
 trap door: 5.00
 # trapped chest: 42.00
 chest: 30.00
 
+
 ### Specialty ###
 stone: 12.00 # AKA Andesite
-ender stone: 99.00 # SH price
-end bricks: 99.00 # SH price
 nether brick: 3.00
 nether brick stairs: 4.50 # 3.00 /4x6
+
+
+### Cargo (South Haven) ###
+ender stone: 99.00
+end bricks: 99.00
+glowstone: 21.00
+
 
 ### Combo ###
 bed: 18.75 # 15.00 /4x3 + 2.50 x3
 dropper: 55.00 # 5.00 x7 + 20.00
-redstone lamp off: 101.00 # 20 x4 + 21.00, SH price
+redstone lamp off: 101.00 # 20 x4 + 21.00
+ender chest: 1320.00 # 40 x8 + 1000.00 x1
