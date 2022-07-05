@@ -27,10 +27,10 @@ piston sticky base: 50.00
 iron trapdoor: 40.00 # 10.00 x4
 
 ### Building Blocks ###
-# stone button: 1.00
+stone button: 1.00
 smooth stairs: 9.00 # 6.00 /6x4
 furnace: 40.00 # 5.00 x8
-# glass: 10.00
+glass: 10.00
 wood button: 3.75 # 15.00 /4
 ladder: 4.375 # 15.00 /4/2x7/3
 fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
@@ -56,5 +56,6 @@ glowstone: 21.00
 ### Combo ###
 bed: 18.75 # 15.00 /4x3 + 2.50 x3
 dropper: 55.00 # 5.00 x7 + 20.00
-redstone lamp off: 101.00 # 20 x4 + 21.00
-ender chest: 1320.00 # 40 x8 + 1000.00 x1
+redstone lamp off: 101.00 # 20.00 x4 + 21.00
+ender chest: 1320.00 # 40.00 x8 + 1000.00 x1
+stained glass: 10.375 # 3.00 /8 + 10.00
