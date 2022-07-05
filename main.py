@@ -213,7 +213,7 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
                 result += f"{repair.delay:,.0f}s\n"
             except PricingError as exception:
                 result += f"> Error pricing: {exception}\n"
-                log.info(f"Error pricing: {exception}")
+                logger.info(f"Error pricing: {exception}")
     except SplitError as exception:
         await interaction.followup.send(f"{repair.start}: Error pricing - {exception}")
         log(interaction, attachment.filename, filename, f"{exception}")
