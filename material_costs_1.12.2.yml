@@ -37,6 +37,7 @@ ladder: 4.375 # 15.00 /4/2x7/3
 fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
 birch fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
 dark oak fence gate: 15.00 # 15.00 /4x2 + 15.00 /4/2x4
+dark oak door item: 7.500 # 14 /6x
 trap door: 5.00
 # trapped chest: 42.00
 chest: 30.00
