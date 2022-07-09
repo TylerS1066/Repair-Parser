@@ -276,6 +276,9 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         await interaction.followup.send(f"Unknown error parsing: {exception}")
         log(interaction, attachment.filename, filename, f"{exception}")
         return
+    while len(result) > 2000:
+        await interaction.followup.send(result[:2000], ephemeral=True)
+        result = result[2000:]
     await interaction.followup.send(result, ephemeral=True)
     log(interaction, attachment.filename, filename)
 
