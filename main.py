@@ -37,6 +37,7 @@ class Repair:
     supplies: 'list[tuple[str, int]]'
     delay: int
     cost: int
+    started: bool = False
 
 
     @staticmethod
@@ -114,8 +115,19 @@ class Repair:
         cost = Repair.__split_chat_line(cost)
         cost = Repair.__split_number_line(cost)
 
+        # Attempt to find starting
+        started = False
+        for index in range(cost_index + 1, cost_index + 50):
+            line = lines[index]
+            try:
+                line = Repair.__split_chat_line(line)
+            except SplitError:
+                continue
+            if line.startswith('Repairs underway: 0/'):
+                started = True
+                break
 
-        return Repair(start, damaged, percent, supplies, delay, cost)
+        return Repair(start, damaged, percent, supplies, delay, cost, started)
 
 
     def total_cost(self, prices: dict[str, int]) -> float:
@@ -249,7 +261,10 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
             result += f"> {repair.start}: {repair.damaged:,} Blocks"
             try:
                 result += f", ${repair.total_cost(material_costs):,.2f} & "
-                result += f"{repair.delay:,.0f}s\n"
+                result += f"{repair.delay:,.0f}s"
+                if repair.started:
+                    result += f" - Started for ${repair.cost:,.2f}"
+                result += '\n'
             except PricingError as exception:
                 result += f" & Error pricing: {exception}\n"
                 logger.info('Error pricing: %s', exception)
