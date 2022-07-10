@@ -246,11 +246,11 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
             os.mkdir(args.log_directory)
         await attachment.save(filename)
     except (discord.HTTPException, discord.NotFound) as exception:
-        await interaction.followup.send(f"Error downloading attachment: {exception}")
+        await interaction.followup.send(f"Error downloading attachment: {exception}", ephemeral=True)
         log(interaction, attachment.filename, filename, f"{exception}")
         return
     except BaseException as exception:
-        await interaction.followup.send(f"Unknown error downloading: {exception}")
+        await interaction.followup.send(f"Unknown error downloading: {exception}", ephemeral=True)
         log(interaction, attachment.filename, filename, f"{exception}")
         return
 
@@ -271,11 +271,11 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
                 logger.info('Error pricing: %s', exception)
             results.append(result)
     except SplitError as exception:
-        await interaction.followup.send(f"{repair.start}: Error pricing - {exception}")
+        await interaction.followup.send(f"{repair.start}: Error pricing - {exception}", ephemeral=True)
         log(interaction, attachment.filename, filename, f"{exception}")
         return
     except BaseException as exception:
-        await interaction.followup.send(f"Unknown error parsing: {exception}")
+        await interaction.followup.send(f"Unknown error parsing: {exception}", ephemeral=True)
         log(interaction, attachment.filename, filename, f"{exception}")
         return
 
