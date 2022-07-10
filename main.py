@@ -1,4 +1,5 @@
 import argparse
+import collections
 import gzip
 import os
 from dataclasses import dataclass
@@ -256,18 +257,19 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
     # Attempt parsing
     try:
         repairs = parse_file(filename)
-        result = f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found\n"
+        results = collections.deque()
+        results.append(f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found")
         for repair in repairs:
-            result += f"> {repair.start}: {repair.damaged:,} Blocks"
+            result = f"> {repair.start}: {repair.damaged:,} Blocks"
             try:
                 result += f", ${repair.total_cost(material_costs):,.2f} & "
                 result += f"{repair.delay:,.0f}s"
                 if repair.started:
                     result += f" - Started for ${repair.cost:,.2f}"
-                result += '\n'
             except PricingError as exception:
-                result += f" & Error pricing: {exception}\n"
+                result += f" & Error pricing: {exception}"
                 logger.info('Error pricing: %s', exception)
+            results.append(result)
     except SplitError as exception:
         await interaction.followup.send(f"{repair.start}: Error pricing - {exception}")
         log(interaction, attachment.filename, filename, f"{exception}")
@@ -276,10 +278,13 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         await interaction.followup.send(f"Unknown error parsing: {exception}")
         log(interaction, attachment.filename, filename, f"{exception}")
         return
-    while len(result) > 2000:
-        await interaction.followup.send(result[:2000], ephemeral=True)
-        result = result[2000:]
-    await interaction.followup.send(result, ephemeral=True)
+
+    # Send results
+    while len(results) > 0:
+        message = ''
+        while len(message) < 2000 and len(results) > 0 and len(message) + len(results[0]) < 2000:
+            message += f"{results.popleft()}\n"
+        await interaction.followup.send(message)
     log(interaction, attachment.filename, filename)
 
 
