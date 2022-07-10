@@ -284,7 +284,7 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         message = ''
         while len(message) < 2000 and len(results) > 0 and len(message) + len(results[0]) < 2000:
             message += f"{results.popleft()}\n"
-        await interaction.followup.send(message)
+        await interaction.followup.send(message, ephemeral=True)
     log(interaction, attachment.filename, filename)
 
 
