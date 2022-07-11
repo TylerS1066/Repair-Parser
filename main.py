@@ -118,7 +118,7 @@ class Repair:
 
         # Attempt to find starting
         started = False
-        for index in range(cost_index + 1, cost_index + 50):
+        for index in range(cost_index + 1, min(cost_index + 50, len(lines))):
             line = lines[index]
             try:
                 line = Repair.__split_chat_line(line)
