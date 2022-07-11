@@ -30,6 +30,7 @@ iron trapdoor: 40.00 # 10.00 x4
 ### Building Blocks ###
 stone button: 1.00
 smooth stairs: 9.00 # 6.00 /6x4
+cobble wall: 5.00 # 5.00 /6x6
 furnace: 40.00 # 5.00 x8
 glass: 10.00
 wood button: 3.75 # 15.00 /4
