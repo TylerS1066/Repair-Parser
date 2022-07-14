@@ -17,6 +17,7 @@ sign: 6.00
 lapis block: 27.00 # 3.00 x9
 # emerald block: 150.00 x9
 # diamond block: 500.00 x9
+gold block: 810
 lever: 1.00
 redstone torch on: 4.00
 redstone: 20.00
