@@ -216,6 +216,28 @@ def log(interaction: discord.Interaction, attachment_name: str, filename: str,
 
     logger.info(f"'{interaction.user.name}' ({interaction.user.id}) uploaded '{attachment_name}' ({filename}) to '{interaction.guild.name}'/'{channel_name}' ({interaction.guild_id}/{interaction.channel_id}): {ending}")
 
+def __format_delay(delay: int) -> str:
+    seconds = delay
+
+    minutes = delay // 60
+    seconds %= 60
+    hours = minutes // 60
+    minutes %= 60
+    days = hours // 24
+    hours %= 24
+
+    result = ''
+    if days > 0:
+        result += f"{days:,.0f}d "
+    if hours > 0:
+        result += f"{hours:,.0f}h "
+    if minutes > 0:
+        result += f"{minutes:,.0f}m "
+    if seconds > 0:
+        result += f"{seconds:,.0f}s "
+    result += f"({delay:,.0f}s)"
+    return result
+
 @tree.command()
 @app_commands.describe(attachment='The log file to upload')
 async def parse(interaction: discord.Interaction, attachment: discord.Attachment):
@@ -264,7 +286,7 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
             result = f"> {repair.start}: {repair.damaged:,} Blocks"
             try:
                 result += f", ${repair.total_cost(material_costs):,.2f} & "
-                result += f"{repair.delay:,.0f}s"
+                result += __format_delay(repair.delay)
                 if repair.started:
                     result += f" - Started for ${repair.cost:,.2f}"
             except PricingError as exception:
