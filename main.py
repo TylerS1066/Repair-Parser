@@ -208,13 +208,13 @@ async def on_ready():
 def log(interaction: discord.Interaction, attachment_name: str, filename: str,
         ending = 'No Errors'):
     '''Logs an interaction'''
-    logger.info("'%s' (%s) uploaded '%s' (%s) to '%s'/'%s' (%s/%s): %s",
-        interaction.user.name, interaction.user.id,
-        attachment_name, filename,
-        interaction.guild.name, interaction.channel.name,
-        interaction.guild_id, interaction.channel_id,
-        ending
-    )
+    channel_name = ''
+    try:
+        channel_name = interaction.channel.name
+    except BaseException as e:
+        channel_name = 'null'
+
+    logger.info(f"'{interaction.user.name}' ({interaction.user.id}) uploaded '{attachment_name}' ({filename}) to '{interaction.guild.name}'/'{channel_name}' ({interaction.guild_id}/{interaction.channel_id}): {ending}")
 
 @tree.command()
 @app_commands.describe(attachment='The log file to upload')
