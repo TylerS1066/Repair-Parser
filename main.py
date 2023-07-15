@@ -203,6 +203,8 @@ allowed_guilds = load_guilds()
 async def on_ready():
     '''Print when the bot is ready'''
     logger.info('Logged in as %s', client.user.name)
+    await tree.sync()
+    logger.info('Synced commands')
 
 
 def log(interaction: discord.Interaction, attachment_name: str, filename: str,
