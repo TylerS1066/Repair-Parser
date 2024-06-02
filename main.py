@@ -1,6 +1,7 @@
 import argparse
 import collections
 import gzip
+import json
 import os
 from dataclasses import dataclass
 import datetime
@@ -142,15 +143,15 @@ class Repair:
 
     def json(self) -> str:
         '''Generates a json summary of this repair'''
-        return {
-            'start_time': self.start_time,
+        return json.dumps({
+            'start_time': self.start_time.isoformat(),
             'block_count': self.block_count,
             'percent_damaged': self.percent_damaged,
             'materials': self.materials,
             'time_delay': self.time_delay,
             'cost': self.cost,
             'started': self.started
-        }
+        })
 
     def __str__(self):
         return f"{self.start_time}: {self.block_count:,} Blocks, ${self.cost:,.2f}, {self.time_delay:,.0f}s"
@@ -198,6 +199,11 @@ def load_guilds() -> list[int]:
         guilds = yaml.safe_load(file)
     return guilds['guilds']
 
+def load_admins() -> list[int]:
+    '''Loads the admins from the admins yaml file'''
+    with open('admins.yml', 'r', encoding='UTF-8') as file:
+        admins = yaml.safe_load(file)
+    return admins['admins']
 
 # Discord.py stuff
 intents = discord.Intents.default()
@@ -209,6 +215,7 @@ logger.setLevel(logging.DEBUG)
 
 material_costs = load_materials()
 allowed_guilds = load_guilds()
+admins = load_admins()
 
 
 @client.event
@@ -304,7 +311,12 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         log(interaction, attachment.filename, filename, f"{exception}")
         return
 
-    await summarize(interaction, attachment, filename, repairs)
+    if interaction.user.id not in admins:
+        await summarize(interaction, attachment, filename, repairs)
+    else:
+        await summarize(interaction, attachment, filename, repairs)
+        await details(interaction, attachment, filename, repairs)
+    log(interaction, attachment.filename, filename)
 
 async def summarize(interaction: discord.Interaction, attachment: discord.Attachment, filename: str, repairs: list[Repair]) -> None:
     # Attempt summarizing
@@ -333,6 +345,24 @@ async def summarize(interaction: discord.Interaction, attachment: discord.Attach
         while len(message) < 2000 and len(results) > 0 and len(message) + len(results[0]) < 2000:
             message += f"{results.popleft()}\n"
         await interaction.followup.send(message, ephemeral=True)
-    log(interaction, attachment.filename, filename)
+
+async def details(interaction: discord.Interaction, attachment: discord.Attachment, filename: str, repairs: list[Repair]) -> None:
+    # Attempt summarizing
+    try:
+        results = collections.deque()
+        results.append(f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found")
+        for repair in repairs:
+            results.append(f"```json\n{repair.json()}\n```\n")
+    except BaseException as exception:
+        await interaction.followup.send(f"Unknown error detailing: {exception}", ephemeral=True)
+        log(interaction, attachment.filename, filename, f"{exception}")
+        return
+
+    # Send results
+    while len(results) > 0:
+        message = ''
+        while len(message) < 2000 and len(results) > 0 and len(message) + len(results[0]) < 2000:
+            message += f"{results.popleft()}\n"
+        await interaction.followup.send(message, ephemeral=True)
 
 client.run(args.token)
