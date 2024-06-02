@@ -16,7 +16,7 @@ from discord import app_commands
 parser = argparse.ArgumentParser(description='Repair bot')
 parser.add_argument('--log_directory', type=str, default='logs', help='Directory to store logs')
 parser.add_argument('--token', type=str, help='Discord token')
-parser.add_argument('--server_version', type=str, default='1.12.2', help='Server version')
+parser.add_argument('--server_version', type=str, default='1.16.5', help='Server version')
 args = parser.parse_args()
 
 
@@ -203,18 +203,42 @@ allowed_guilds = load_guilds()
 async def on_ready():
     '''Print when the bot is ready'''
     logger.info('Logged in as %s', client.user.name)
+    await tree.sync()
+    logger.info('Synced commands')
 
 
 def log(interaction: discord.Interaction, attachment_name: str, filename: str,
         ending = 'No Errors'):
     '''Logs an interaction'''
-    logger.info("'%s' (%s) uploaded '%s' (%s) to '%s'/'%s' (%s/%s): %s",
-        interaction.user.name, interaction.user.id,
-        attachment_name, filename,
-        interaction.guild.name, interaction.channel.name,
-        interaction.guild_id, interaction.channel_id,
-        ending
-    )
+    channel_name = ''
+    try:
+        channel_name = interaction.channel.name
+    except BaseException as e:
+        channel_name = 'null'
+
+    logger.info(f"'{interaction.user.name}' ({interaction.user.id}) uploaded '{attachment_name}' ({filename}) to '{interaction.guild.name}'/'{channel_name}' ({interaction.guild_id}/{interaction.channel_id}): {ending}")
+
+def __format_delay(delay: int) -> str:
+    seconds = delay
+
+    minutes = delay // 60
+    seconds %= 60
+    hours = minutes // 60
+    minutes %= 60
+    days = hours // 24
+    hours %= 24
+
+    result = ''
+    if days > 0:
+        result += f"{days:,.0f}d "
+    if hours > 0:
+        result += f"{hours:,.0f}h "
+    if minutes > 0:
+        result += f"{minutes:,.0f}m "
+    if seconds > 0:
+        result += f"{seconds:,.0f}s "
+    result += f"({delay:,.0f}s)"
+    return result
 
 @tree.command()
 @app_commands.describe(attachment='The log file to upload')
@@ -264,7 +288,7 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
             result = f"> {repair.start}: {repair.damaged:,} Blocks"
             try:
                 result += f", ${repair.total_cost(material_costs):,.2f} & "
-                result += f"{repair.delay:,.0f}s"
+                result += __format_delay(repair.delay)
                 if repair.started:
                     result += f" - Started for ${repair.cost:,.2f}"
             except PricingError as exception:
