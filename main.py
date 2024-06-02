@@ -1,6 +1,7 @@
 import argparse
 import collections
 import gzip
+import json
 import os
 from dataclasses import dataclass
 import datetime
@@ -142,15 +143,15 @@ class Repair:
 
     def json(self) -> str:
         '''Generates a json summary of this repair'''
-        return {
-            'start_time': self.start_time,
+        return json.dumps({
+            'start_time': self.start_time.isoformat(),
             'block_count': self.block_count,
             'percent_damaged': self.percent_damaged,
             'materials': self.materials,
             'time_delay': self.time_delay,
             'cost': self.cost,
             'started': self.started
-        }
+        })
 
     def __str__(self):
         return f"{self.start_time}: {self.block_count:,} Blocks, ${self.cost:,.2f}, {self.time_delay:,.0f}s"
@@ -197,7 +198,6 @@ def load_guilds() -> list[int]:
     with open('guilds.yml', 'r', encoding='UTF-8') as file:
         guilds = yaml.safe_load(file)
     return guilds['guilds']
-
 
 # Discord.py stuff
 intents = discord.Intents.default()
@@ -253,10 +253,10 @@ def __format_delay(delay: int) -> str:
     result += f"({delay:,.0f}s)"
     return result
 
-@tree.command()
+@tree.command(name='parse')
 @app_commands.describe(attachment='The log file to upload')
-async def parse(interaction: discord.Interaction, attachment: discord.Attachment):
-    '''Respond to an uploaded logfile'''
+async def parse_summary(interaction: discord.Interaction, attachment: discord.Attachment):
+    '''Respond to an uploaded logfile with a summary'''
     # Check allowed guilds
     if interaction.guild_id not in allowed_guilds:
         await interaction.response.send_message("This server is not allowed to use this bot")
@@ -304,9 +304,6 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
         log(interaction, attachment.filename, filename, f"{exception}")
         return
 
-    await summarize(interaction, attachment, filename, repairs)
-
-async def summarize(interaction: discord.Interaction, attachment: discord.Attachment, filename: str, repairs: list[Repair]) -> None:
     # Attempt summarizing
     try:
         results = collections.deque()
@@ -326,6 +323,72 @@ async def summarize(interaction: discord.Interaction, attachment: discord.Attach
         await interaction.followup.send(f"Unknown error summarizing: {exception}", ephemeral=True)
         log(interaction, attachment.filename, filename, f"{exception}")
         return
+
+    # Send results
+    while len(results) > 0:
+        message = ''
+        while len(message) < 2000 and len(results) > 0 and len(message) + len(results[0]) < 2000:
+            message += f"{results.popleft()}\n"
+        await interaction.followup.send(message, ephemeral=True)
+    log(interaction, attachment.filename, filename)
+
+
+@tree.command(name='parse-json')
+@app_commands.describe(attachment='The log file to upload')
+async def parse_json(interaction: discord.Interaction, attachment: discord.Attachment):
+    '''Respond to an uploaded logfile with JSON'''
+    # Check allowed guilds
+    if interaction.guild_id not in allowed_guilds:
+        await interaction.response.send_message("This server is not allowed to use this bot")
+        return
+    # Check file name and size
+    if not attachment.filename.endswith('.log.gz') and not attachment.filename.endswith('.log'):
+        await interaction.response.send_message('File must be a .log.gz or .log file',
+            ephemeral=True)
+        log(interaction, attachment.filename, '', 'Wrong type')
+        return
+    if attachment.size > 32*1024*1024:
+        await interaction.response.send_message('File must be less than 32MiB', ephemeral=True)
+        log(interaction, attachment.filename, '', f"Too large ({attachment.size:,} bytes)")
+        return
+
+    # Defer response
+    await interaction.response.defer(ephemeral=True, thinking=True)
+
+    # Attempt to download
+    try:
+        filename = f"{datetime.datetime.now(datetime.UTC).isoformat()}_{interaction.user.id}_{attachment.filename}".replace(':', '-')
+        filename = os.path.join(args.log_directory, filename)
+        if not os.path.exists(args.log_directory):
+            os.mkdir(args.log_directory)
+        await attachment.save(filename)
+    except (discord.HTTPException, discord.NotFound) as exception:
+        await interaction.followup.send(f"Error downloading attachment: {exception}",
+            ephemeral=True)
+        log(interaction, attachment.filename, filename, f"{exception}")
+        return
+    except BaseException as exception:
+        await interaction.followup.send(f"Unknown error downloading: {exception}", ephemeral=True)
+        log(interaction, attachment.filename, filename, f"{exception}")
+        return
+
+    # Attempt parsing
+    try:
+        repairs = parse_file(filename)
+    except SplitError as exception:
+        await interaction.followup.send(f"Error pricing - {exception}", ephemeral=True)
+        log(interaction, attachment.filename, filename, f"{exception}")
+        return
+    except BaseException as exception:
+        await interaction.followup.send(f"Unknown error parsing: {exception}", ephemeral=True)
+        log(interaction, attachment.filename, filename, f"{exception}")
+        return
+
+    # Attempt detailing
+    results = collections.deque()
+    results.append(f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found")
+    for repair in repairs:
+        results.append(f"```json\n{repair.json()}\n```\n")
 
     # Send results
     while len(results) > 0:
