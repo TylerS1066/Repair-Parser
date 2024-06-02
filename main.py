@@ -16,7 +16,7 @@ from discord import app_commands
 parser = argparse.ArgumentParser(description='Repair bot')
 parser.add_argument('--log_directory', type=str, default='logs', help='Directory to store logs')
 parser.add_argument('--token', type=str, help='Discord token')
-parser.add_argument('--server_version', type=str, default='1.16.5', help='Server version')
+parser.add_argument('--server_version', type=str, default='1.18.2', help='Server version')
 args = parser.parse_args()
 
 
