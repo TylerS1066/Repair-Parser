@@ -3,7 +3,7 @@ import collections
 import gzip
 import os
 from dataclasses import dataclass
-from datetime import datetime
+import datetime
 import time
 import logging
 import yaml
@@ -32,11 +32,11 @@ class PricingError(ValueError):
 @dataclass
 class Repair:
     '''Represents a repair'''
-    start: datetime
-    damaged: int
-    percent: float
-    supplies: 'list[tuple[str, int]]'
-    delay: int
+    start_time: datetime.datetime
+    block_count: int
+    percent_damaged: float
+    materials: dict[str, int]
+    time_delay: int
     cost: int
     started: bool = False
 
@@ -54,11 +54,11 @@ class Repair:
     @staticmethod
     def __split_start_line(string: str) -> time:
         timestamp = string.split('] ')[0][1:]
-        timestamp = datetime.strptime(timestamp, '%H:%M:%S')
+        timestamp = datetime.datetime.strptime(timestamp, '%H:%M:%S')
         return timestamp.time()
 
     @staticmethod
-    def __split_material_line(string: str) -> 'tuple[str, int]':
+    def __split_material_line(string: str) -> tuple[str, int]:
         strings = string.split(' : ')
         if len(strings) < 2:
             raise SplitError(f"'{string}' cannot be split")
@@ -79,7 +79,7 @@ class Repair:
             return float(strings[1])
 
     @staticmethod
-    def parse(lines: 'list[str]', start_index: int, end_index: int) -> 'Repair':
+    def parse(lines: list[str], start_index: int, end_index: int) -> 'Repair':
         '''Parses a repair from a list of lines'''
         damaged_index = start_index
         percentage_index = start_index + 1
@@ -90,27 +90,27 @@ class Repair:
 
 
         # Reduce lines
-        start = lines[start_index]
-        start = Repair.__split_start_line(start)
+        start_time = lines[start_index]
+        start_time = Repair.__split_start_line(start_time)
 
-        damaged = lines[damaged_index]
-        damaged = Repair.__split_chat_line(damaged)
-        damaged = Repair.__split_number_line(damaged)
+        block_count = lines[damaged_index]
+        block_count = Repair.__split_chat_line(block_count)
+        block_count = Repair.__split_number_line(block_count)
 
-        percent = lines[percentage_index]
-        percent = Repair.__split_chat_line(percent)
-        percent = Repair.__split_number_line(percent)
+        percent_damaged = lines[percentage_index]
+        percent_damaged = Repair.__split_chat_line(percent_damaged)
+        percent_damaged = Repair.__split_number_line(percent_damaged)
 
-        supplies = []
+        materials: dict[str, int] = {}
         for index in range(supply_start_index, supply_end_index):
             line = lines[index]
             line = Repair.__split_chat_line(line)
             line = Repair.__split_material_line(line)
-            supplies.append(line)
+            materials[line[0]] = line[1]
 
-        delay = lines[delay_index]
-        delay = Repair.__split_chat_line(delay)
-        delay = Repair.__split_number_line(delay)
+        time_delay = lines[delay_index]
+        time_delay = Repair.__split_chat_line(time_delay)
+        time_delay = Repair.__split_number_line(time_delay)
 
         cost = lines[cost_index]
         cost = Repair.__split_chat_line(cost)
@@ -118,7 +118,7 @@ class Repair:
 
         # Attempt to find starting
         started = False
-        for index in range(cost_index + 1, min(cost_index + 50, len(lines))):
+        for index in range(cost_index + 1, min(cost_index + 100, len(lines))):
             line = lines[index]
             try:
                 line = Repair.__split_chat_line(line)
@@ -128,20 +128,32 @@ class Repair:
                 started = True
                 break
 
-        return Repair(start, damaged, percent, supplies, delay, cost, started)
+        return Repair(start_time, block_count, percent_damaged, materials, time_delay, cost, started)
 
 
     def total_cost(self, prices: dict[str, int]) -> float:
         '''Calculates the cost of a repair'''
         total = self.cost
-        for supply, amount in self.supplies:
-            if supply not in prices.keys():
-                raise PricingError(f"{supply} is not in the prices dictionary")
-            total += amount * prices[supply]
+        for material, amount in self.materials.items():
+            if material not in prices.keys():
+                raise PricingError(f"{material} is not in the prices dictionary")
+            total += amount * prices[material]
         return total
 
+    def json(self) -> str:
+        '''Generates a json summary of this repair'''
+        return {
+            'start_time': self.start_time,
+            'block_count': self.block_count,
+            'percent_damaged': self.percent_damaged,
+            'materials': self.materials,
+            'time_delay': self.time_delay,
+            'cost': self.cost,
+            'started': self.started
+        }
+
     def __str__(self):
-        return f"{self.start}: {self.damaged:,} Blocks, ${self.cost:,.2f}, {self.delay:,.0f}s"
+        return f"{self.start_time}: {self.block_count:,} Blocks, ${self.cost:,.2f}, {self.time_delay:,.0f}s"
 
 
 
@@ -219,6 +231,7 @@ def log(interaction: discord.Interaction, attachment_name: str, filename: str,
     logger.info(f"'{interaction.user.name}' ({interaction.user.id}) uploaded '{attachment_name}' ({filename}) to '{interaction.guild.name}'/'{channel_name}' ({interaction.guild_id}/{interaction.channel_id}): {ending}")
 
 def __format_delay(delay: int) -> str:
+    '''Nicely formats a time delay'''
     seconds = delay
 
     minutes = delay // 60
@@ -264,7 +277,7 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
 
     # Attempt to download
     try:
-        filename = f"{datetime.utcnow().isoformat()}_{interaction.user.id}_{attachment.filename}"
+        filename = f"{datetime.datetime.now(datetime.UTC).isoformat()}_{interaction.user.id}_{attachment.filename}".replace(':', '-')
         filename = os.path.join(args.log_directory, filename)
         if not os.path.exists(args.log_directory):
             os.mkdir(args.log_directory)
@@ -282,26 +295,35 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
     # Attempt parsing
     try:
         repairs = parse_file(filename)
+    except SplitError as exception:
+        await interaction.followup.send(f"Error pricing - {exception}", ephemeral=True)
+        log(interaction, attachment.filename, filename, f"{exception}")
+        return
+    except BaseException as exception:
+        await interaction.followup.send(f"Unknown error parsing: {exception}", ephemeral=True)
+        log(interaction, attachment.filename, filename, f"{exception}")
+        return
+
+    await summarize(interaction, attachment, filename, repairs)
+
+async def summarize(interaction: discord.Interaction, attachment: discord.Attachment, filename: str, repairs: list[Repair]) -> None:
+    # Attempt summarizing
+    try:
         results = collections.deque()
         results.append(f"{len(repairs)} repair{'' if len(repairs) == 1 else 's'} found")
         for repair in repairs:
-            result = f"> {repair.start}: {repair.damaged:,} Blocks"
+            result = f"> {repair.start_time}: {repair.block_count:,} Blocks"
             try:
                 result += f", ${repair.total_cost(material_costs):,.2f} & "
-                result += __format_delay(repair.delay)
+                result += __format_delay(repair.time_delay)
                 if repair.started:
                     result += f" - Started for ${repair.cost:,.2f}"
             except PricingError as exception:
                 result += f" & Error pricing: {exception}"
                 logger.info('Error pricing: %s', exception)
             results.append(result)
-    except SplitError as exception:
-        await interaction.followup.send(f"{repair.start}: Error pricing - {exception}",
-            ephemeral=True)
-        log(interaction, attachment.filename, filename, f"{exception}")
-        return
     except BaseException as exception:
-        await interaction.followup.send(f"Unknown error parsing: {exception}", ephemeral=True)
+        await interaction.followup.send(f"Unknown error summarizing: {exception}", ephemeral=True)
         log(interaction, attachment.filename, filename, f"{exception}")
         return
 
@@ -312,6 +334,5 @@ async def parse(interaction: discord.Interaction, attachment: discord.Attachment
             message += f"{results.popleft()}\n"
         await interaction.followup.send(message, ephemeral=True)
     log(interaction, attachment.filename, filename)
-
 
 client.run(args.token)
