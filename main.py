@@ -277,7 +277,7 @@ async def parse_summary(interaction: discord.Interaction, attachment: discord.At
 
     # Attempt to download
     try:
-        filename = f"{datetime.datetime.now(datetime.UTC).isoformat()}_{interaction.user.id}_{attachment.filename}".replace(':', '-')
+        filename = f"{datetime.datetime.now().isoformat()}_{interaction.user.id}_{attachment.filename}"
         filename = os.path.join(args.log_directory, filename)
         if not os.path.exists(args.log_directory):
             os.mkdir(args.log_directory)
@@ -357,7 +357,7 @@ async def parse_json(interaction: discord.Interaction, attachment: discord.Attac
 
     # Attempt to download
     try:
-        filename = f"{datetime.datetime.now(datetime.UTC).isoformat()}_{interaction.user.id}_{attachment.filename}".replace(':', '-')
+        filename = f"{datetime.datetime.now().isoformat()}_{interaction.user.id}_{attachment.filename}"
         filename = os.path.join(args.log_directory, filename)
         if not os.path.exists(args.log_directory):
             os.mkdir(args.log_directory)
