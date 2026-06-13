@@ -74,7 +74,7 @@ class Repair:
         '''Parses a repair from a list of lines'''
         damaged_index = start_index
         percentage_index = start_index + 1
-        supply_start_index = start_index + 3
+        supply_start_index = start_index + 2
         supply_end_index = end_index - 2
         delay_index = end_index - 1
         cost_index = end_index
@@ -93,7 +93,7 @@ class Repair:
         percent_damaged = Repair.__split_number_line(percent_damaged)
 
         materials: dict[str, int] = {}
-        for index in range(supply_start_index, supply_end_index):
+        for index in range(supply_start_index, supply_end_index + 1):
             line = lines[index]
             line = Repair.__split_chat_line(line)
             line = Repair.__split_material_line(line)

@@ -21,17 +21,16 @@ from main import Repair, SplitError, PricingError  # noqa: E402
 SAMPLE_LOG_LINES = [
     "[12:00:00] [CHAT] Total damaged blocks: 100",
     "[12:00:01] [CHAT] Percent damaged: 12.5",
-    "[12:00:02] [CHAT] Materials required:",
-    "[12:00:03] [CHAT] STONE : 50",
-    "[12:00:04] [CHAT] IRON_INGOT : 10",
-    "[12:00:05] [CHAT] Time until completion: 3600",
-    "[12:00:06] [CHAT] Money to complete repair: 500",
-    "[12:00:07] [CHAT] Repairs underway: 0/1",
+    "[12:00:02] [CHAT] STONE : 50",
+    "[12:00:03] [CHAT] IRON_INGOT : 10",
+    "[12:00:04] [CHAT] Time until completion: 3600",
+    "[12:00:05] [CHAT] Money to complete repair: 500",
+    "[12:00:06] [CHAT] Repairs underway: 0/1"
 ]
 
 
 def test_parse_basic_repair():
-    repair = Repair.parse(SAMPLE_LOG_LINES, 0, 6)
+    repair = Repair.parse(SAMPLE_LOG_LINES, 0, 5)
 
     assert repair.start_time == datetime.time(12, 0, 0)
     assert repair.block_count == 100
@@ -45,12 +44,12 @@ def test_parse_basic_repair():
 def test_parse_not_started():
     # Remove the "Repairs underway: 0/1" line so `started` should be False
     lines = SAMPLE_LOG_LINES[:-1]
-    repair = Repair.parse(lines, 0, 6)
+    repair = Repair.parse(lines, 0, 5)
     assert repair.started is False
 
 
 def test_total_cost_with_prices():
-    repair = Repair.parse(SAMPLE_LOG_LINES, 0, 6)
+    repair = Repair.parse(SAMPLE_LOG_LINES, 0, 5)
     prices = {"STONE": 1, "IRON_INGOT": 5}
 
     # 500 (base cost) + 50*1 + 10*5 = 600
@@ -58,7 +57,7 @@ def test_total_cost_with_prices():
 
 
 def test_total_cost_missing_material_raises():
-    repair = Repair.parse(SAMPLE_LOG_LINES, 0, 6)
+    repair = Repair.parse(SAMPLE_LOG_LINES, 0, 5)
     prices = {"STONE": 1}  # IRON_INGOT missing
 
     with pytest.raises(PricingError):
@@ -66,7 +65,7 @@ def test_total_cost_missing_material_raises():
 
 
 def test_json_output():
-    repair = Repair.parse(SAMPLE_LOG_LINES, 0, 6)
+    repair = Repair.parse(SAMPLE_LOG_LINES, 0, 5)
     data = json.loads(repair.json())
 
     assert data["block_count"] == 100
