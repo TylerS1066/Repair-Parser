@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import datetime
 import time
 import logging
+import json
 import yaml
 import discord
 from discord import app_commands
@@ -193,9 +194,19 @@ def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description='Repair bot')
     parser.add_argument('--log_directory', type=str, default='logs', help='Directory to store logs')
-    parser.add_argument('--token', type=str, help='Discord token')
     parser.add_argument('--server_version', type=str, default='1.18.2', help='Server version')
     args = parser.parse_args()
+
+    try:
+        # Load the tokens from the environment
+        DISCORD_TOKEN = os.environ['SECRET_DISCORD_TOKEN']
+        DISCORD_GUILD = os.environ['SECRET_DISCORD_GUILD']
+    except KeyError:
+        # Or load from JSON file
+        with open('token.json', 'r', encoding='UTF+8') as f:
+            tokens = json.load(f)
+            DISCORD_TOKEN = tokens['DISCORD_TOKEN']
+            DISCORD_GUILD = tokens['DISCORD_GUILD']
 
     # Discord.py stuff
     intents = discord.Intents.default()
@@ -207,6 +218,7 @@ def main():
 
     material_costs = load_materials(args.server_version)
     allowed_guilds = load_guilds()
+    allowed_guilds.append(int(DISCORD_GUILD))
 
     @client.event
     async def on_ready():
@@ -395,7 +407,7 @@ def main():
             await interaction.followup.send(message, ephemeral=True)
         log(interaction, attachment.filename, filename)
 
-    client.run(args.token)
+    client.run(DISCORD_TOKEN)
 
 if __name__ == '__main__':
     main()
